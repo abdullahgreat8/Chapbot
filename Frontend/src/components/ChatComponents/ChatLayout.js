@@ -1,6 +1,3 @@
-
-
-
 import React from "react";
 import { MainContainer } from "@chatscope/chat-ui-kit-react";
 import ChatSidebar from "./ChatSidebar";
@@ -8,7 +5,6 @@ import MessagePanel from "./MessagePanel";
 
 const ChatLayout = ({
   contacts,
-  services,
   selectedContactId,
   setSelectedContactId,
   searchTerm,
@@ -87,7 +83,6 @@ const ChatLayout = ({
             contact={selectedContact}
             messages={messages[selectedContactId] || []}
             onSend={handleSend}
-            services={services}
             onServiceSelect={handleServiceClick}
           />
         </MainContainer>
@@ -105,7 +100,5 @@ const ChatLayout = ({
 };
 
 export default ChatLayout;
-
-
 
 
