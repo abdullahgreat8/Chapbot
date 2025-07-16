@@ -33,3 +33,13 @@ select * from users;
 
 
 select * from users where email='john@example.com';
+
+
+INSERT INTO businesses (id, name, description) VALUES
+(4, 'MediCarePlus', 'Telehealth and online doctor consultations'),
+(5, 'FoodExpress', 'Fast food delivery and restaurant aggregator'),
+(6, 'TravelMate', 'Booking flights, hotels, and travel packages'),
+(7, 'GreenBazaar', 'Online organic grocery and eco products store'),
+(8, 'SecureBank', 'Digital banking and financial services'),
+(9, 'HomeEase', 'Home cleaning and repair services'),
+(10, 'SkillForge', 'Online coding bootcamps and tech courses');
