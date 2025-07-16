@@ -83,4 +83,11 @@ catch(err){
 
 }
 
-module.exports={signup,login,verify_pin}
+const image_uploaded=(req,res)=>{
+    if(!req.file){
+        res.status(501).json({message : "image upload failed"})
+    }
+    res.status(201).json({message: "Image uploaded Success"})
+}
+
+module.exports={signup,login,verify_pin,image_uploaded}

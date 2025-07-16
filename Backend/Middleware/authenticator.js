@@ -15,7 +15,7 @@ const authenticate = (req,res,next)=>{
         next();
     }
     catch(err){
-        return res.json(403).json({error: "Invalid token"});
+        return res.json(401).json({error: "Invalid token"});
     }
 }
 
