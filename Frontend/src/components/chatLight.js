@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ChatLayout from "./ChatComponents/ChatLayout";
-import api from "../api/axios"; // Centralized Axios instance
+import api from "../api/axios";
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
 
 const ChatLight = () => {
@@ -12,7 +12,6 @@ const ChatLight = () => {
   const [pinVerified, setPinVerified] = useState({});
   const [waitingForServiceSelection, setWaitingForServiceSelection] = useState({});
 
-  // Fetch businesses
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
@@ -30,14 +29,12 @@ const ChatLight = () => {
         const initialWaitingStates = {};
 
         data.forEach((c) => {
-          initialMsgs[c.id] = [
-            {
-              direction: "incoming",
-              message: "Welcome! Please enter your PIN to proceed.",
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              type: "message"
-            },
-          ];
+          initialMsgs[c.id] = [{
+            direction: "incoming",
+            message: "Welcome! Please enter your PIN to proceed.",
+            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            type: "message"
+          }];
           initialPinStates[c.id] = false;
           initialWaitingStates[c.id] = false;
         });
@@ -55,7 +52,18 @@ const ChatLight = () => {
     fetchBusinesses();
   }, []);
 
-  // Fetch services
+  const saveMessageToBackend = async (businessId, sender, message) => {
+    try {
+      await api.post("/chat/add", {
+        business_id: businessId,
+        sender,
+        message
+      });
+    } catch (err) {
+      console.error("Failed to save message:", err);
+    }
+  };
+
   const fetchServices = async (businessId, parentServiceId = null) => {
     try {
       const response = await api.get("/service/get_all_services", {
@@ -66,6 +74,7 @@ const ChatLight = () => {
       });
 
       const data = response.data;
+
       if (Array.isArray(data.services)) {
         const serviceObjects = data.services.map((s) => ({
           name: s.name,
@@ -73,30 +82,37 @@ const ChatLight = () => {
         }));
 
         const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const newMsgs = [
+          {
+            direction: "incoming",
+            message: "Please select a service:",
+            timestamp,
+            type: "message"
+          },
+          {
+            direction: "incoming",
+            services: serviceObjects,
+            timestamp,
+            type: "services"
+          }
+        ];
+
         setMessages((prev) => ({
           ...prev,
           [businessId]: [
             ...(prev[businessId] || []),
-            {
-              direction: "incoming",
-              message: "Please select a service:",
-              timestamp,
-              type: "message"
-            },
-            {
-              direction: "incoming",
-              services: serviceObjects,
-              timestamp,
-              type: "services"
-            }
+            ...newMsgs
           ],
         }));
+
+        await saveMessageToBackend(businessId, "bot", "Please select a service:");
 
         setWaitingForServiceSelection(prev => ({
           ...prev,
           [businessId]: true
         }));
       } else if (data.message) {
+        const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         setMessages((prev) => ({
           ...prev,
           [businessId]: [
@@ -104,35 +120,36 @@ const ChatLight = () => {
             {
               direction: "incoming",
               message: data.message,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              timestamp,
               type: "message"
             },
           ],
         }));
+
+        await saveMessageToBackend(businessId, "bot", data.message);
       }
     } catch (err) {
       console.error("Failed to fetch services:", err);
     }
   };
 
-  // Handle user input
   const handleSend = async (text) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
     if (waitingForServiceSelection[selectedContactId] && pinVerified[selectedContactId]) {
+      const warningMsg = "Please select a service from above.";
+
       setMessages((prev) => ({
         ...prev,
         [selectedContactId]: [
           ...(prev[selectedContactId] || []),
           { direction: "outgoing", message: text, timestamp, type: "message" },
-          {
-            direction: "incoming",
-            message: "Please select a service from above.",
-            timestamp,
-            type: "message"
-          },
+          { direction: "incoming", message: warningMsg, timestamp, type: "message" },
         ],
       }));
+
+      await saveMessageToBackend(selectedContactId, "user", text);
+      await saveMessageToBackend(selectedContactId, "bot", warningMsg);
       return;
     }
 
@@ -144,6 +161,8 @@ const ChatLight = () => {
       ],
     }));
 
+    await saveMessageToBackend(selectedContactId, "user", text);
+
     if (!pinVerified[selectedContactId]) {
       try {
         const res = await api.post("/user/verifypin", { pin: text });
@@ -154,33 +173,31 @@ const ChatLight = () => {
             [selectedContactId]: true
           }));
 
+          const successMsg = "PIN verified! You can now use the available services.";
+
           setMessages((prev) => ({
             ...prev,
             [selectedContactId]: [
               ...prev[selectedContactId],
-              {
-                direction: "incoming",
-                message: "PIN verified! You can now use the available services.",
-                timestamp,
-                type: "message"
-              },
+              { direction: "incoming", message: successMsg, timestamp, type: "message" },
             ],
           }));
 
+          await saveMessageToBackend(selectedContactId, "bot", successMsg);
+
           await fetchServices(selectedContactId);
         } else {
+          const invalidMsg = "Invalid PIN. Please try again.";
+
           setMessages((prev) => ({
             ...prev,
             [selectedContactId]: [
               ...prev[selectedContactId],
-              {
-                direction: "incoming",
-                message: "Invalid PIN. Please try again.",
-                timestamp,
-                type: "message"
-              },
+              { direction: "incoming", message: invalidMsg, timestamp, type: "message" },
             ],
           }));
+
+          await saveMessageToBackend(selectedContactId, "bot", invalidMsg);
         }
       } catch (error) {
         console.error("PIN verification error", error);
@@ -188,7 +205,6 @@ const ChatLight = () => {
     }
   };
 
-  // Handle service click
   const handleServiceClick = async (service) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -199,6 +215,8 @@ const ChatLight = () => {
         { direction: "outgoing", message: service.name, timestamp, type: "message" },
       ],
     }));
+
+    await saveMessageToBackend(selectedContactId, "user", service.name);
 
     setWaitingForServiceSelection(prev => ({
       ...prev,
@@ -240,6 +258,8 @@ const ChatLight = () => {
           ],
         }));
 
+        await saveMessageToBackend(selectedContactId, "bot", "Please select a service:");
+
         setWaitingForServiceSelection(prev => ({
           ...prev,
           [selectedContactId]: true
@@ -258,6 +278,8 @@ const ChatLight = () => {
           ],
         }));
 
+        await saveMessageToBackend(selectedContactId, "bot", data.message);
+
         setWaitingForServiceSelection(prev => ({
           ...prev,
           [selectedContactId]: false
@@ -271,7 +293,7 @@ const ChatLight = () => {
   return (
     <ChatLayout
       contacts={contacts}
-      services={[]} // No longer passing services separately
+      services={[]}
       selectedContactId={selectedContactId}
       setSelectedContactId={setSelectedContactId}
       searchTerm={searchTerm}
