@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ChatLayout from "./ChatComponents/ChatLayout";
-import axios from "axios";
+import api from "../api/axios"; // Centralized Axios instance
 import '@chatscope/chat-ui-kit-styles/dist/default/styles.min.css';
 
 const ChatLight = () => {
@@ -9,25 +9,14 @@ const ChatLight = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [messages, setMessages] = useState({});
   const [services, setServices] = useState([]);
-  // Change this to track PIN verification per contact
   const [pinVerified, setPinVerified] = useState({});
-  // Change this to track waiting state per contact
   const [waitingForServiceSelection, setWaitingForServiceSelection] = useState({});
-
-  const getAuthHeader = () => {
-    const token = localStorage.getItem("authToken");
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-  };
 
   // Fetch businesses
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/buisness/get_all_buisness");
+        const res = await api.get("/buisness/get_all_buisness");
         const data = res.data.buisness.map((b, idx) => ({
           id: String(b.id),
           name: b.name,
@@ -36,11 +25,10 @@ const ChatLight = () => {
 
         setContacts(data);
 
-        // Initialize messages with a PIN request
         const initialMsgs = {};
         const initialPinStates = {};
         const initialWaitingStates = {};
-        
+
         data.forEach((c) => {
           initialMsgs[c.id] = [
             {
@@ -50,7 +38,6 @@ const ChatLight = () => {
               type: "message"
             },
           ];
-          // Initialize PIN verification state for each contact
           initialPinStates[c.id] = false;
           initialWaitingStates[c.id] = false;
         });
@@ -58,7 +45,7 @@ const ChatLight = () => {
         setMessages(initialMsgs);
         setPinVerified(initialPinStates);
         setWaitingForServiceSelection(initialWaitingStates);
-        
+
         if (data.length) setSelectedContactId(data[0].id);
       } catch (err) {
         console.error("Error fetching businesses", err);
@@ -71,7 +58,7 @@ const ChatLight = () => {
   // Fetch services
   const fetchServices = async (businessId, parentServiceId = null) => {
     try {
-      const response = await axios.get("http://localhost:5000/service/get_all_services", {
+      const response = await api.get("/service/get_all_services", {
         params: {
           buisness_id: businessId,
           parent_service_id: parentServiceId ?? null,
@@ -84,8 +71,7 @@ const ChatLight = () => {
           name: s.name,
           id: s.id,
         }));
-        
-        // Add services to chat history
+
         const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
         setMessages((prev) => ({
           ...prev,
@@ -105,8 +91,7 @@ const ChatLight = () => {
             }
           ],
         }));
-        
-        // Update waiting state for this specific contact
+
         setWaitingForServiceSelection(prev => ({
           ...prev,
           [businessId]: true
@@ -130,11 +115,10 @@ const ChatLight = () => {
     }
   };
 
-  // Handle user input (PIN or message)
+  // Handle user input
   const handleSend = async (text) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // Check waiting state for the current contact
     if (waitingForServiceSelection[selectedContactId] && pinVerified[selectedContactId]) {
       setMessages((prev) => ({
         ...prev,
@@ -160,17 +144,16 @@ const ChatLight = () => {
       ],
     }));
 
-    // Check PIN verification for the current contact
     if (!pinVerified[selectedContactId]) {
       try {
-        const res = await axios.post("http://localhost:5000/user/verifypin", { pin: text }, getAuthHeader());
+        const res = await api.post("/user/verifypin", { pin: text });
+
         if (res.data.message === "pin verified") {
-          // Update PIN verification for this specific contact
           setPinVerified(prev => ({
             ...prev,
             [selectedContactId]: true
           }));
-          
+
           setMessages((prev) => ({
             ...prev,
             [selectedContactId]: [
@@ -183,6 +166,7 @@ const ChatLight = () => {
               },
             ],
           }));
+
           await fetchServices(selectedContactId);
         } else {
           setMessages((prev) => ({
@@ -208,7 +192,6 @@ const ChatLight = () => {
   const handleServiceClick = async (service) => {
     const timestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // Add user selection to messages
     setMessages((prev) => ({
       ...prev,
       [selectedContactId]: [
@@ -217,15 +200,13 @@ const ChatLight = () => {
       ],
     }));
 
-    // Reset waiting state for this specific contact
     setWaitingForServiceSelection(prev => ({
       ...prev,
       [selectedContactId]: false
     }));
 
-    // Fetch sub-services
     try {
-      const response = await axios.get("http://localhost:5000/service/get_all_services", {
+      const response = await api.get("/service/get_all_services", {
         params: {
           buisness_id: selectedContactId,
           parent_service_id: service.id,
@@ -239,8 +220,7 @@ const ChatLight = () => {
           name: s.name,
           id: s.id,
         }));
-        
-        // Add new services to chat history
+
         setMessages((prev) => ({
           ...prev,
           [selectedContactId]: [
@@ -259,14 +239,12 @@ const ChatLight = () => {
             }
           ],
         }));
-        
-        // Update waiting state for this specific contact
+
         setWaitingForServiceSelection(prev => ({
           ...prev,
           [selectedContactId]: true
         }));
       } else if (data.message) {
-        // If no services found, show fallback message
         setMessages((prev) => ({
           ...prev,
           [selectedContactId]: [
@@ -279,8 +257,7 @@ const ChatLight = () => {
             },
           ],
         }));
-        
-        // Update waiting state for this specific contact
+
         setWaitingForServiceSelection(prev => ({
           ...prev,
           [selectedContactId]: false
@@ -294,7 +271,7 @@ const ChatLight = () => {
   return (
     <ChatLayout
       contacts={contacts}
-      services={[]} // No longer passing services as separate prop
+      services={[]} // No longer passing services separately
       selectedContactId={selectedContactId}
       setSelectedContactId={setSelectedContactId}
       searchTerm={searchTerm}
