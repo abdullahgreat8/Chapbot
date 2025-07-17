@@ -137,7 +137,7 @@ const BusinessChatLanding = () => {
                 <span>Start Chatting</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
-              <button className="border border-gray-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-all duration-300 transform hover:scale-105">
+              <button onClick={()=> window.open('https://youtu.be/PLsQx4Zgl70')} className="border border-gray-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-800 transition-all duration-300 transform hover:scale-105">
                 Watch Demo
               </button>
             </div>
