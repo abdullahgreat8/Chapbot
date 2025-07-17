@@ -56,6 +56,7 @@ import Signup from "./components/SignUp";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
 import BusinessChatLanding from "./components/BusinessChatLanding"; // Import the landing page
+import GoogleLoginSuccess from "./components/GoogleLoginSuccess";
 
 const App = () => {
   return (
@@ -70,6 +71,8 @@ const App = () => {
             </GuestRoute>
           }
         />
+
+        <Route path="/google-login-success" element={<GoogleLoginSuccess />} />
 
         {/* Public routes only when NOT logged in */}
         <Route

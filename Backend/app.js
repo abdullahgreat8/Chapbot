@@ -6,6 +6,8 @@ const buisness_router=require('./Routes/Business_routes')
 const service_router=require('./Routes/service_routes')
 const chat_router=require('./Routes/ChatHistory')
 const cors = require("cors");
+const authRoutes = require("./Routes/auth");
+const passport = require("./config/Passport");
 env.config()
 
 const app=express()
@@ -18,6 +20,9 @@ app.use(
   })
 );
 app.use(express.json());
+app.use(passport.initialize());
+
+app.use("/auth", authRoutes);
 app.use('/user',userrouter)
 app.use('/buisness',buisness_router)
 app.use('/service',service_router)
