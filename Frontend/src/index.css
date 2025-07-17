@@ -27,10 +27,11 @@ code {
 }
 
 html, body, #root {
-  height: 100%;
+  height: auto;
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
 }
+
 
 /* override Chatscope's internal message list background */
 :global(.cs-message-list__scroll-wrapper) {
