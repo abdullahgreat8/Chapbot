@@ -4,6 +4,7 @@ const env=require('dotenv')
 const userrouter=require('./Routes/user_routes')
 const buisness_router=require('./Routes/Business_routes')
 const service_router=require('./Routes/service_routes')
+const chat_router=require('./Routes/ChatHistory')
 const cors = require("cors");
 env.config()
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use('/user',userrouter)
 app.use('/buisness',buisness_router)
 app.use('/service',service_router)
+app.use('/chat',chat_router)
 pool.connect((err,client,release)=>{
     if(err){
         console.log(err)
